@@ -1,0 +1,21 @@
+{
+  "name": "redux-data-entity",
+  "version": "0.1.0",
+  "description": "Immutable Data Collections",
+  "author": {
+    "name": "iamawebgeek",
+    "url": "https://github.com/iamawebgeek"
+  },
+  "main": "src/index.js",
+  "license": "MIT",
+  "dependencies": {
+    "immutable": "^3.8.1",
+    "uniqid": "^4.1.1"
+  },
+  "peerDependencies": {
+    "redux": "~3.7.2"
+  },
+  "devDependencies": {
+    "babel-preset-es2015": "^6.24.1"
+  }
+}

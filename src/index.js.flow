@@ -1,0 +1,35 @@
+// @flow
+import {
+  States,
+  CREATE_ONE,
+  READ_ONE,
+  UPDATE_ONE,
+  DELETE_ONE,
+  CREATE_MANY,
+  READ_MANY,
+  UPDATE_MANY,
+  DELETE_MANY,
+} from './index';
+
+type DataEntityConfig<T> = {
+  reducerName: string,
+  process: (action: DataEntityAction, config: DataEntityActionConfig) => ?Promise,
+  reducerDefault?: Array<T>,
+  keyExtractor?: (T) => string | number,
+  keyGenerator?: (T) => string,
+  cacheRequestsCount?: number,
+  cacheValidityTime?: ?number,
+}
+
+type DataEntityActionConfig = {
+  optimistic?: boolean,
+  force?: boolean,
+  data?: any,
+  keys?: Array<any>,
+  params?: any,
+  additionalMeta?: any,
+}
+
+type DataEntityAction = CREATE_ONE | READ_ONE | UPDATE_ONE | DELETE_ONE |
+  CREATE_MANY | READ_MANY | UPDATE_MANY | DELETE_MANY
+type DataEntityState = States.START | States.SUCCESS | States.FAIL
