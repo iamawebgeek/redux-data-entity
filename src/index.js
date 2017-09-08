@@ -44,7 +44,7 @@ const defaultActionConfig = {
   additionalMeta: {},
 }
 
-class DataEntity<DataEntityConfig> {
+export class DataEntity<DataEntityConfig> {
   config: DataEntityConfig
   _lastRequestIndex = 0
   _previousState: Map
