@@ -44,16 +44,13 @@ const defaultActionConfig = {
   additionalMeta: {},
 }
 
-export class DataEntity<DataEntityConfig> {
-  config: DataEntityConfig
+export class DataEntity {
   _lastRequestIndex = 0
-  _previousState: Map
-  _requestStates: Map
-  constructor(config: DataEntityConfig) {
+  constructor(config) {
     this.config = { ...defaultConfig, config }
     this.clear()
   }
-  perform(dispatch: Function, action: DataEntityAction, config?: DataEntityActionConfig, meta: any): number {
+  perform(dispatch, action, config, meta) {
     config = { ...defaultActionConfig, config }
     if (!this.isPerforming(action, config) || config.force) {
       const actionPromise = this.config.process(READ_MANY, config)
@@ -76,7 +73,7 @@ export class DataEntity<DataEntityConfig> {
       .get(action)
       .findKey(request => request.get('active') && request.get('config').equals(config))
   }
-  reducePerform(dispatch: Function, actions: Array<Array<DataEntityAction, DataEntityActionConfig, any>>, mergeParameters: Function) {
+  reducePerform(dispatch, actions, mergeParameters) {
     actions.forEach((action) => {
 
     })
@@ -87,14 +84,14 @@ export class DataEntity<DataEntityConfig> {
       Object.keys(Actions).reduce((key, mapped) => ({ ...mapped, [key]: new OrderedMap() }), {})
     )
   }
-  isPerforming(action: DataEntityAction, config?: DataEntityActionConfig): boolean {
+  isPerforming(action, config) {
     let actionState = this._requestStates.get(action).filter(request => request.get('active'))
     if (!config) {
       return actionState.size > 0
     }
     return typeof actionState.find(request => request.get('config').equals(config)) !== 'undefined'
   }
-  sortFinishedRequests(requests: OrderedMap): OrderedMap {
+  sortFinishedRequests(requests) {
     return requests
       .filter(request => !request.get('active'))
       .sortBy(
@@ -102,7 +99,7 @@ export class DataEntity<DataEntityConfig> {
         (timeA, timeB) => timeA < timeB ? -1 : +(timeA > timeB)
       )
   }
-  getLastError(action: DataEntityAction, config?: DataEntityActionConfig): ?Error {
+  getLastError(action, config) {
     let actionState = this._requestStates.get(action)
     if (config) {
       let requestState = actionState.find(request => request.get('config').equals(config))
@@ -153,7 +150,7 @@ export class DataEntity<DataEntityConfig> {
                 .map((value, action) => value.set('action', action))
                 .flatten(true)
             )
-            .forEach((request: Map) => {
+            .forEach((request) => {
               let payload = request.get('payload', null)
               switch (request.get('action')) {
                 case READ_ONE:
@@ -221,13 +218,13 @@ export class DataEntity<DataEntityConfig> {
       },
     }
   }
-  getConst(action: DataEntityAction, state?: DataEntityState): string {
+  getConst(action, state) {
     return `${PREFIX}/${this.config.reducerName}/${action}_${state}`
   }
-  _newState(state: Map) {
+  _newState(state) {
     this._requestStates = state.map((requests, action) => requests.takeLast(this.config.cacheRequestsCount))
   }
-  parseAction(actionType: string): ?string {
+  parseAction(actionType) {
     for (let action in Actions) {
       if (actionType.startsWith(`${PREFIX}/${this.config.reducerName}/${action}`)) {
         return action
@@ -235,7 +232,7 @@ export class DataEntity<DataEntityConfig> {
     }
     return null
   }
-  parseState(actionType: string): ?string {
+  parseState(actionType) {
     let action = this.parseAction(actionType)
     if (action !== null) {
       for (let state in States) {
