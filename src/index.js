@@ -113,7 +113,7 @@ export class DataEntity {
   }
   getReducers() {
     return {
-      [`internal(RDE-${this.config.reducerName})`]: (state, { type, config, requestId, payload }) => {
+      [`internal(RDE-${this.config.reducerName})`]: (oldState, { type, config, requestId, payload }) => {
         let action = this.parseAction(type)
         let state = this.parseState(type)
         if (action !== null && state !== null) {
