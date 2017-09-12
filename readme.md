@@ -3,7 +3,7 @@ A library that helps to manage data in easier way with redux
 
 ## Features
 - Less actions, reducers and constants declaration
-- Uses [immutable.js](https://github.com/facebook/immutable-js/) for state management
+- Integrated with [immutable.js](https://github.com/facebook/immutable-js/) for state management
 - Caching requests
 - Prevents repetitive requests
 - Optimistic creates, updates and deletes
@@ -51,7 +51,7 @@ export default new DataEntity({
           params: config.params,
         })
       case READ_ONE:
-        return fetchMyData(`${API}/users/${config.params.id}`, {
+        return fetchMyData(`${API}/users/${config.keys[0]}`, {
           method: 'GET',
           params: config.params,
         })
@@ -61,13 +61,14 @@ export default new DataEntity({
           data: config.data,
         })
       case UPDATE_ONE:
-        return fetchMyData(`${API}/users/${config.params.id}`, {
+        return fetchMyData(`${API}/users/${config.keys[0]}`, {
           method: 'PUT',
           data: config.data,
         })
       case DELETE_ONE:
-        return fetchMyData(`${API}/users/${config.params.id}`, {
+        return fetchMyData(`${API}/users/${config.keys[0]}`, {
           method: 'DELETE',
+          optimistic: true,
         })
     }
     return null
@@ -75,32 +76,40 @@ export default new DataEntity({
 })
 
 // e.g. entities/index.js
-import userRDE from './user'
-import postRDE from './post'
+import user from './user'
+import post from './post'
 
 export default {
-  userRDE,
-  postRDE,
+  users,
+  posts,
 }
 ```
 ### Combine with other reducers
 ```js
 // e.g reducers/index.js
-export default combineReducers({
+import { combineDataEntities } from 'redux-data-entity'
+
+import entities from '../entities'
+
+export default combineReducers(
+  combineDataEntities(entities, {
   // some other reducers ...
   
-})
+  })
+)
 ```
 ### Using inside component
 ```js
 // e.g. components/SomeDataComponent.js
-import { userRDE } from '../entities'
+import { READ_MANY } from 'redux-data-entity'
+
+import entities from '../entities'
 
 class SomeDataComponent extends Component {
   componentDidMount() {
-    this.props.userRDEAction(READ_MANY)
+    this.props.userActions(READ_MANY)
   }
-  renderLoading() {
+  renderLoader() {
     return (
       <SomeActivityIndicator />
     )
@@ -109,7 +118,7 @@ class SomeDataComponent extends Component {
     return (
       <div>
         {this.props.users.map((user) => (
-          <span>{user.name}</span>
+          <span>{user.get('name')}</span>
         ))}
       </div>
     )
@@ -122,13 +131,13 @@ class SomeDataComponent extends Component {
 }
 
 const mapStateToProps = (state) => ({
-  users: filterUsersSelector(state.users),
+  users: state.users,
   // note: any loading state getters should be inside state to props mapper
-  isLoadingUsers: userRDE.isPerforming(READ_MANY),
+  isLoadingUsers: entities.users.isPerforming(READ_MANY),
 })
 
 const mapDispatchToProps = (dispatch) => ({
-  userRDEAction: (args) => userRDE.perform(dispatch, ...args),
+  userActions: entities.users.perform(dispatch),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(SomeDataComponent)

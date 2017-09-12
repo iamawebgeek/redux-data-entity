@@ -30,7 +30,7 @@ export const States = {
 }
 
 const defaultConfig = {
-  keyExtractor: (unit) => unit.id,
+  keyExtractor: (unit) => unit.get('id'),
   keyGenerator: () => uniqid.time(),
   cacheRequestsCount: 3,
   cacheValidityTime: null,
@@ -41,47 +41,43 @@ const defaultActionConfig = {
   force: false,
   data: {},
   params: {},
-  additionalMeta: {},
 }
 
 export class DataEntity {
   _lastRequestIndex = 0
   constructor(config) {
-    this.config = { ...defaultConfig, config }
+    this.config = { ...defaultConfig, ...config }
     this.clear()
   }
-  perform(dispatch, action, config, meta) {
-    config = { ...defaultActionConfig, config }
-    if (!this.isPerforming(action, config) || config.force) {
-      const actionPromise = this.config.process(READ_MANY, config)
-      const requestId = ++this._lastRequestIndex
-      dispatch({ type: this.getConst(action, States.START), config, requestId, meta })
-      if (actionPromise !== null) {
-        actionPromise
-          .then(
-            (data) => {
-              dispatch({ type: this.getConst(action, States.SUCCESS), payload: data, requestId, meta })
-            },
-            (error) => {
-              dispatch({ type: this.getConst(action, States.FAIL), payload: error, requestId, meta })
-            },
-          )
+  perform(dispatch) {
+    return (action, config, meta) => {
+      config = { ...defaultActionConfig, ...config }
+      if (!this.isPerforming(action, config) || config.force) {
+        const actionPromise = this.config.process(action, config)
+        const requestId = ++this._lastRequestIndex
+        dispatch({ type: this.getConst(action, States.START), config, requestId, meta })
+        if (actionPromise !== null) {
+          actionPromise
+            .then(
+              (data) => {
+                dispatch({ type: this.getConst(action, States.SUCCESS), payload: data, requestId, meta })
+              },
+              (error) => {
+                dispatch({ type: this.getConst(action, States.FAIL), payload: error, requestId, meta })
+              },
+            )
+        }
+        return requestId
       }
-      return requestId
+      return this._requestStates
+        .get(action)
+        .findKey(request => request.get('active') && request.get('config').equals(config))
     }
-    return this._requestStates
-      .get(action)
-      .findKey(request => request.get('active') && request.get('config').equals(config))
-  }
-  reducePerform(dispatch, actions, mergeParameters) {
-    actions.forEach((action) => {
-
-    })
   }
   clear() {
     this._previousState = null
-    this._requestStates = Map.of(
-      Object.keys(Actions).reduce((key, mapped) => ({ ...mapped, [key]: new OrderedMap() }), {})
+    this._requestStates = new Map(
+      Object.keys(Actions).reduce((mapped, key) => ({ ...mapped, [Actions[key]]: new OrderedMap() }), {})
     )
   }
   isPerforming(action, config) {
@@ -93,7 +89,7 @@ export class DataEntity {
   }
   sortFinishedRequests(requests) {
     return requests
-      .filter(request => !request.get('active'))
+      .filter((action, key, request) => !request.getIn([key, 'active']))
       .sortBy(
         (value) => value.get('finish'),
         (timeA, timeB) => timeA < timeB ? -1 : +(timeA > timeB)
@@ -113,7 +109,7 @@ export class DataEntity {
   }
   getReducers() {
     return {
-      [`internal(RDE-${this.config.reducerName})`]: (oldState, { type, config, requestId, payload }) => {
+      [`internal(RDE:${this.config.reducerName})`]: (oldState, { type, config, requestId, payload }) => {
         let action = this.parseAction(type)
         let state = this.parseState(type)
         if (action !== null && state !== null) {
@@ -131,25 +127,24 @@ export class DataEntity {
             requestState.active = true
             requestState.start = Date.now()
           }
+          requestState.action = action
           this._newState(this._requestStates.mergeIn([action, requestId], fromJS(requestState)))
         }
         return this._requestStates
       },
       [this.config.reducerName]: (state) => {
         if (this._previousState !== null && is(this._previousState, this._requestStates)) {
-          return state
+          return state || new OrderedMap()
         }
         let reducerState = new OrderedMap()
-        reducerState.withMutations((orderedMap) => {
-          this.config.reducerDefault.forEach((item) => {
-            let key = this.config.keyExtractor(item).toString()
-            orderedMap.set(key, item)
-          })
-          this.sortFinishedRequests(
-              this._requestStates
-                .map((value, action) => value.set('action', action))
-                .flatten(true)
-            )
+        reducerState = reducerState.withMutations((orderedMap) => {
+          if (this.config.reducerDefault) {
+            this.config.reducerDefault.forEach((item) => {
+              let key = this.config.keyExtractor(item).toString()
+              orderedMap.set(key, item)
+            })
+          }
+          this.sortFinishedRequests(this._requestStates.flatten(1))
             .forEach((request) => {
               let payload = request.get('payload', null)
               switch (request.get('action')) {
@@ -157,7 +152,7 @@ export class DataEntity {
                 case CREATE_ONE:
                 case UPDATE_ONE:
                   if (payload !== null) {
-                    payload = List.of(payload)
+                    payload = new List([payload])
                   }
                 case READ_MANY:
                 case CREATE_MANY:
@@ -171,19 +166,22 @@ export class DataEntity {
                   break
                 case DELETE_ONE:
                 case DELETE_MANY:
-                  request.getIn(['config', 'keys'], new List()).forEach(key => {
-                    orderedMap.delete(key)
-                  })
+                  if (!request.has('error')) {
+                    request.getIn(['config', 'keys'], new List()).forEach(key => {
+                      orderedMap.delete(key)
+                    })
+                  }
+                  break
               }
             })
           this._requestStates.forEach((requests, action) => {
             requests.forEach((request) => {
-              if (request.getIn(['config', 'optimistic'], false) && request.getIn(['config', 'active'], false)) {
+              if (request.getIn(['config', 'optimistic'], false) && request.get('active', false)) {
                 let data = request.getIn(['config', 'data'], new List())
                 let actionKeys = request.getIn(['config', 'keys'])
                 switch (action) {
                   case CREATE_ONE:
-                    data = List.of(data)
+                    data = new List([data])
                   case CREATE_MANY:
                     if (Iterable.isIterable(data)) {
                       data.forEach((item) => {
@@ -193,14 +191,15 @@ export class DataEntity {
                     }
                     break
                   case UPDATE_ONE:
-                    data = List.of(data)
+                    data = new List([data])
                   case UPDATE_MANY:
                     if (Iterable.isIterable(data)) {
                       data.forEach((item, index) => {
                         let key = (actionKeys && actionKeys.get(index)) || this.config.keyExtractor(item)
-                        orderedMap.mergeIn([key.toString()], item)
+                        orderedMap.mergeDeepIn([key.toString()], item)
                       })
                     }
+                    break
                   case DELETE_ONE:
                   case DELETE_MANY:
                     if (Iterable.isIterable(actionKeys)) {
@@ -208,6 +207,7 @@ export class DataEntity {
                         orderedMap.delete(key.toString())
                       })
                     }
+                    break
                 }
               }
             })
@@ -244,3 +244,10 @@ export class DataEntity {
     return null
   }
 }
+
+export const combineDataEntities = (entities, reducers = {}) => (
+  Object.keys(entities).reduce((mergedReducers, entityName) => ({
+    ...mergedReducers,
+    ...entities[entityName].getReducers(),
+  }), reducers)
+)

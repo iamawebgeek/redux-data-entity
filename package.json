@@ -1,6 +1,6 @@
 {
   "name": "redux-data-entity",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "description": "Redux plugin for working with data much easier way",
   "author": {
     "name": "iamawebgeek",
@@ -12,7 +12,8 @@
     "redux bolierplate",
     "rest",
     "data entity",
-    "entity"
+    "redux crud",
+    "redux api"
   ],
   "repository": "https://github.com/iamawebgeek/redux-data-entity",
   "main": "lib/index.js",
