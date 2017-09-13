@@ -1,22 +1,10 @@
 // @flow
-import {
-  States,
-  CREATE_ONE,
-  READ_ONE,
-  UPDATE_ONE,
-  DELETE_ONE,
-  CREATE_MANY,
-  READ_MANY,
-  UPDATE_MANY,
-  DELETE_MANY,
-} from './index';
-
 type DataEntityConfig<T> = {
   reducerName: string,
   process: (action: DataEntityAction, config: DataEntityActionConfig) => ?Promise,
   reducerDefault?: Array<T>,
-  keyExtractor?: (T) => string | number,
-  keyGenerator?: (T) => string,
+  keyExtractor?: (unit: Map) => string | number,
+  keyGenerator?: () => string,
   cacheRequestsCount?: number,
   cacheValidityTime?: ?number,
 }
@@ -25,11 +13,28 @@ type DataEntityActionConfig = {
   optimistic?: boolean,
   force?: boolean,
   data?: any,
-  keys?: Array<any>,
+  keys?: Array<string | number>,
   params?: any,
-  additionalMeta?: any,
 }
 
-type DataEntityAction = CREATE_ONE | READ_ONE | UPDATE_ONE | DELETE_ONE |
-  CREATE_MANY | READ_MANY | UPDATE_MANY | DELETE_MANY
-type DataEntityState = States.START | States.SUCCESS | States.FAIL
+type DataEntityAction = 'CREATE_ONE' | 'READ_ONE' | 'UPDATE_ONE' | 'DELETE_ONE' |
+  'CREATE_MANY' | 'READ_MANY' | 'UPDATE_MANY' | 'DELETE_MANY'
+type DataEntityState = 'START' | 'SUCCESS' | 'FAIL'
+
+declare class DataEntity<DataEntityConfig> {
+  perform: (dispatch: Function) => (action: DataEntityAction, config?: DataEntityActionConfig, callback?: Function, meta?: any) => number
+  clear: () => void,
+  isPerforming: (action: DataEntityAction, config?: DataEntityActionConfig) => boolean,
+  getLastError: (action: DataEntityAction, config?: DataEntityActionConfig) => ?Error,
+  getReducers: () => Object,
+  getConst: (action: DataEntityAction, state: DataEntityState) => string,
+  parseAction: (type: string) => ?string,
+  parseState: (type: string) => ?string,
+}
+
+declare function combineDataEntities(entities: Object, reducers?: Object): Object
+
+export {
+  DataEntity,
+  combineDataEntities,
+}

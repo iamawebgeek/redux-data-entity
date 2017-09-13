@@ -43,6 +43,15 @@ const defaultActionConfig = {
   params: {},
 }
 
+function sortFinishedRequests(requests) {
+  return requests
+    .filter((action, key, request) => !request.getIn([key, 'active']))
+    .sortBy(
+      (value) => value.get('finish'),
+      (timeA, timeB) => timeA < timeB ? -1 : +(timeA > timeB)
+    )
+}
+
 export class DataEntity {
   _lastRequestIndex = 0
   constructor(config) {
@@ -50,20 +59,31 @@ export class DataEntity {
     this.clear()
   }
   perform(dispatch) {
-    return (action, config, meta) => {
+    return (action, config, callback, meta) => {
+      if (!Actions[action]) {
+        throw new Error(`Unknown action provided. Please, use on of ${Object(Actions).keys().join(', ')}`)
+      }
       config = { ...defaultActionConfig, ...config }
       if (!this.isPerforming(action, config) || config.force) {
         const actionPromise = this.config.process(action, config)
         const requestId = ++this._lastRequestIndex
+        const onRequestFinish = () => {
+          if (typeof callback === 'function') {
+            const request = this._requestStates.getIn([action, requestId])
+            callback(request.get('error', null), request.get('payload'))
+          }
+        }
         dispatch({ type: this.getConst(action, States.START), config, requestId, meta })
         if (actionPromise !== null) {
           actionPromise
             .then(
               (data) => {
                 dispatch({ type: this.getConst(action, States.SUCCESS), payload: data, requestId, meta })
+                onRequestFinish()
               },
               (error) => {
                 dispatch({ type: this.getConst(action, States.FAIL), payload: error, requestId, meta })
+                onRequestFinish()
               },
             )
         }
@@ -87,14 +107,6 @@ export class DataEntity {
     }
     return typeof actionState.find(request => request.get('config').equals(config)) !== 'undefined'
   }
-  sortFinishedRequests(requests) {
-    return requests
-      .filter((action, key, request) => !request.getIn([key, 'active']))
-      .sortBy(
-        (value) => value.get('finish'),
-        (timeA, timeB) => timeA < timeB ? -1 : +(timeA > timeB)
-      )
-  }
   getLastError(action, config) {
     let actionState = this._requestStates.get(action)
     if (config) {
@@ -103,7 +115,7 @@ export class DataEntity {
         ? new Error(requestState.get('error'))
         : null
     }
-    let lastError = this.sortFinishedRequests(actionState)
+    let lastError = sortFinishedRequests(actionState)
       .findLast(request => request.has('error'))
     return typeof lastError !== 'undefined' ? new Error(lastError.get('error')) : null
   }
@@ -144,7 +156,7 @@ export class DataEntity {
               orderedMap.set(key, item)
             })
           }
-          this.sortFinishedRequests(this._requestStates.flatten(1))
+          sortFinishedRequests(this._requestStates.flatten(1))
             .forEach((request) => {
               let payload = request.get('payload', null)
               switch (request.get('action')) {
