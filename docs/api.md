@@ -1,14 +1,12 @@
 ## Redux Data Entity API
 
-#### combineDataEntities(entities, reducers)
+#### `combineDataEntities(entities)`
 
-Function that extracts reducers from entities and combines with other reducers
+Function that extracts reducers from entities
 
-#### class DataEntity
+#### `configureDataEntity(config)`
 
-##### `new DataEntity(config)`
-
-Create a new `DataEntity` given options.
+Returns a new function for creating `data entity` with given global options.
 
 - *config*: Configuration of a new DataEntity instance with some required keys
   - *reducerName* (required): Name of your reducer to access data later (should be unique)
@@ -16,10 +14,9 @@ Create a new `DataEntity` given options.
   - *reducerDefault*: Default state of the reducer
   - *keyExtractor*: Function that extracts key of a data unit. Defaults to id property getter
   - *keyGenerator*: Function that would generate a key for new optimistic data units. Defaults to `uniqid` module id generation `time` method
-  - *cacheRequestsCount*: Number of requests to keep in memory. **NOTE: may be removed later**
-  - *cacheValidityTime*: Duration (in microseconds) of requests validity. **NOTE: not implemented yet**
+  - *responseValidityTime*: Duration (in microseconds) of requests validity, if given object, checks property of necessary action
 
-##### `perform(dispatch): actionHandlerFunction`
+##### `getActionHandler(dispatch): actionHandlerFunction`
 
 Gets a redux store dispatcher function and returns a new function that would handle data loading
 

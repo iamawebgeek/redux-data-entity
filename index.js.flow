@@ -1,0 +1,44 @@
+// @flow
+type DataEntityConfig<T> = {
+  reducerName?: string,
+  process?: (action: DataEntityAction, config: DataEntityActionConfig, dataEntityConfig: DataEntityConfig) => ?Promise,
+  reducerDefault?: Array<T> | Object<string, T>,
+  keyExtractor?: (unit: Object) => string | number,
+  keyGenerator?: () => string,
+  valueExtractor?: (unit: Object) => T
+  responseValidityTime?: ?number | Object<DataEntityAction, number>,
+}
+
+type DataEntityActionConfig = {
+  optimistic?: boolean,
+  force?: boolean,
+  data?: any,
+  keys?: Array<string | number>,
+  params?: any,
+}
+
+type DataEntityAction = 'CREATE_ONE' | 'READ_ONE' | 'UPDATE_ONE' | 'DELETE_ONE' |
+  'CREATE_MANY' | 'READ_MANY' | 'UPDATE_MANY' | 'DELETE_MANY' | 'CLEAR'
+type DataEntityState = 'START' | 'SUCCESS' | 'FAIL'
+
+declare class DataEntity<DataEntityConfig> {
+  isPerforming: (action: DataEntityAction, config?: DataEntityActionConfig) => boolean,
+  isOptimistic: (key: string) => boolean,
+  shouldRequest: (action: DataEntityAction, config?: DataEntityActionConfig) => boolean,
+  getActionHandler: (dispatch: Function) => (action: DataEntityAction, config?: DataEntityActionConfig, callback?: ?Function, meta?: Object) => number
+  getCacheCleaner: (dispatch: Function) => () => void,
+  getLastError: (action: DataEntityAction, config?: DataEntityActionConfig) => ?Error,
+  getReducer: () => Function,
+  getConst: (action: DataEntityAction, state?: DataEntityState) => string,
+  parseAction: (type: string) => ?string,
+  parseState: (type: string, action?: string) => ?string,
+}
+
+declare function combineEntities(entities: Object): Object
+declare function createDataEntityInstance(entities: Array<string> | Object): Object<string, DataEntity>
+declare function configureDataEntity(globalConfig: DataEntityConfig, globalActionConfig: DataEntityActionConfig): createDataEntityInstance
+
+export {
+  configureDataEntity,
+  combineEntities,
+}

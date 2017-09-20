@@ -3,7 +3,6 @@ A library that helps to manage data in easier way with redux
 
 ## Features
 - Less actions, reducers and constants declaration
-- Integrated with [immutable.js](https://github.com/facebook/immutable-js/) for state management
 - Caching requests
 - Prevents repetitive requests
 - Optimistic creates, updates and deletes
@@ -30,59 +29,59 @@ coming soon...
 
 ### Creating new data entity instance
 ```js
-// e.g. entities/user.js file
-import {
-  DataEntity,
-  READ_MANY,
-  READ_ONE,
-  CREATE_ONE,
-  UPDATE_ONE,
-  DELETE_ONE,
-} from 'redux-data-entity'
-
-export default new DataEntity({
-  reducerName: 'users',
-  process: (action, config) => {
-    const API = 'http://localhost'
-    switch (action) {
-      case READ_MANY:
-        return fetchMyData(`${API}/users`, {
-          method: 'GET',
-          params: config.params,
-        })
-      case READ_ONE:
-        return fetchMyData(`${API}/users/${config.keys[0]}`, {
-          method: 'GET',
-          params: config.params,
-        })
-      case CREATE_ONE:
-        return fetchMyData(`${API}/users`, {
-          method: 'POST',
-          data: config.data,
-        })
-      case UPDATE_ONE:
-        return fetchMyData(`${API}/users/${config.keys[0]}`, {
-          method: 'PUT',
-          data: config.data,
-        })
-      case DELETE_ONE:
-        return fetchMyData(`${API}/users/${config.keys[0]}`, {
-          method: 'DELETE',
-          optimistic: true,
-        })
-    }
-    return null
-  },
-})
-
 // e.g. entities/index.js
-import user from './user'
-import post from './post'
+import {
+  configureDataEntity,
+  Actions,
+} from 'redux-data-entity'
+import { fetchMyData } from './localUtils'
 
-export default {
-  users,
-  posts,
-}
+const createDataEntities = configureDataEntity(
+  {
+    process: (action, config, instanceConfig) => {
+      const API = `http://localhost/${instanceConfig.endpoint}`
+      switch (action) {
+        case Actions.READ_MANY:
+          return fetchMyData(`${API}`, {
+            method: 'GET',
+            params: config.params,
+          })
+        case Actions.READ_ONE:
+          return fetchMyData(`${API}/${config.keys[0]}`, {
+            method: 'GET',
+            params: config.params,
+          })
+        case Actions.CREATE_ONE:
+          return fetchMyData(`${API}`, {
+            method: 'POST',
+            data: config.data,
+          })
+        case Actions.UPDATE_ONE:
+          return fetchMyData(`${API}/${config.keys[0]}`, {
+            method: 'PUT',
+            data: config.data,
+          })
+        case Actions.DELETE_ONE:
+          return fetchMyData(`${API}/${config.keys[0]}`, {
+            method: 'DELETE',
+            optimistic: true,
+          })
+      }
+      return null
+    },
+  }
+)
+export default createDataEntities({
+  users: {
+    endpoint: 'v1/user',
+  },
+  posts: {
+    endpoint: 'v1/posts',
+  },
+  comments: {
+    endpoint: 'v2/comments',
+  }
+})
 ```
 ### Combine with other reducers
 ```js
@@ -92,10 +91,10 @@ import { combineDataEntities } from 'redux-data-entity'
 import entities from '../entities'
 
 export default combineReducers(
-  combineDataEntities(entities, {
-  // some other reducers ...
-  
-  })
+  ...combineEntities(entities),
+  {
+    // other reducers
+  },
 )
 ```
 ### Using inside component
@@ -117,9 +116,12 @@ class SomeDataComponent extends Component {
   renderContent() {
     return (
       <div>
-        {this.props.users.map((user) => (
-          <span>{user.get('name')}</span>
-        ))}
+        {Object.keys(this.props.users).map((key) => {
+          const user = this.props.users[key]
+          return (
+            <span>{user.name}</span>            
+          )
+        })}
       </div>
     )
   }
@@ -137,7 +139,7 @@ const mapStateToProps = (state) => ({
 })
 
 const mapDispatchToProps = (dispatch) => ({
-  userActions: entities.users.perform(dispatch),
+  userActions: entities.users.getActionHandler(dispatch),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(SomeDataComponent)

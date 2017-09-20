@@ -1,6 +1,6 @@
 {
   "name": "redux-data-entity",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "Redux plugin for working with data much easier way",
   "author": {
     "name": "iamawebgeek",
@@ -23,7 +23,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "immutable": "^3.8.1",
+    "lodash": "^4.17.4",
     "uniqid": "^4.1.1"
   },
   "devDependencies": {
