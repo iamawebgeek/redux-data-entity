@@ -1,10 +1,10 @@
 ## Redux Data Entity API
 
-#### `combineDataEntities(entities)`
+### `combineDataEntities(entities)`
 
 Function that extracts reducers from entities
 
-#### `configureDataEntity(config)`
+### `configureDataEntity(config)`
 
 Returns a new function for creating `data entity` with given global options.
 
@@ -16,7 +16,7 @@ Returns a new function for creating `data entity` with given global options.
   - *keyGenerator*: Function that would generate a key for new optimistic data units. Defaults to `uniqid` module id generation `time` method
   - *responseValidityTime*: Duration (in microseconds) of requests validity, if given object, checks property of necessary action
 
-##### `getActionHandler(dispatch): actionHandlerFunction`
+#### `getActionHandler(dispatch): actionHandlerFunction`
 
 Gets a redux store dispatcher function and returns a new function that would handle data loading
 

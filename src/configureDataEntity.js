@@ -172,9 +172,16 @@ export default function configureDataEntity(globalEntityConfig = {}, globalActio
             modified = dataEntity.config.optimistic
           }
           else {
+            const oldLength = requests.length
+            const keysToMatch = ['config', 'action']
+            requests = requests.filter((request) => {
+              let request1 = _.pick(request, keysToMatch)
+              let request2 = _.pick(dataEntity, keysToMatch)
+              return !(request !== dataEntity && _.isEqual(request1, request2));
+            })
             dataEntity.finishTime = +Date.now()
             dataEntity[requestState === States.FAIL ? 'error' : 'result'] = payload
-            modified = requests.indexOf(dataEntity) !== -1
+            modified = requests.indexOf(dataEntity) !== -1 || oldLength !== requests.length
           }
           if (!modified) {
             state = { ...state }
@@ -186,6 +193,10 @@ export default function configureDataEntity(globalEntityConfig = {}, globalActio
 
     function getConfig() {
       return { ...instanceConfig }
+    }
+
+    function getActionConfig() {
+      return { ...defaultActionConfig }
     }
 
     function cacheIsValid(action, req) {
@@ -201,14 +212,13 @@ export default function configureDataEntity(globalEntityConfig = {}, globalActio
       return false
     }
 
-    function shouldRequestInner(action, config, request) {
+    function shouldRequest(action, config) {
       let valid = false
       let active = requestHas(action, config, (req) => {
         if (_.isNumber(req.finishTime)) {
           if (_.isUndefined(req.error) && cacheIsValid(action, req)) {
             valid = true
           }
-          request = req
           return false
         }
         return true
@@ -220,23 +230,15 @@ export default function configureDataEntity(globalEntityConfig = {}, globalActio
       return optimisticKeys.indexOf(key) !== -1
     }
 
-    function shouldRequest(action, config) {
-      return shouldRequestInner(action, config)
-    }
-
     function getActionHandler(dispatch) {
       return function (action, config, callback, meta = {}) {
-        let request = null
         function onFinish(error, result) {
           if (_.isFunction(callback)) {
             callback(error, result)
           }
-          if (request !== null) {
-            requests.splice(requests.indexOf(request), 1)
-          }
         }
         config = { ...defaultActionConfig, ...config }
-        if (config.force || shouldRequestInner(action, config, request)) {
+        if (config.force || shouldRequest(action, config)) {
           const dataEntity = { config }
           dispatch({ type: getConst(action, States.START), meta: { ...meta, dataEntity  } })
           const actionRequest = instanceConfig.process(action, dataEntity.config, getConfig())
@@ -305,6 +307,7 @@ export default function configureDataEntity(globalEntityConfig = {}, globalActio
       getReducer,
       getConst,
       getConfig,
+      getActionConfig,
       getLastError,
       parseState,
       parseAction,

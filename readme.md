@@ -2,10 +2,11 @@
 A library that helps to manage data in easier way with redux
 
 ## Features
-- Less actions, reducers and constants declaration
+- No actions, reducers and constants declaration
 - Caching requests
 - Prevents repetitive requests
 - Optimistic creates, updates and deletes
+- Zero config integration (no store modification)
 
 ## Plans for future work
 Check it out [here](docs/plans.md)
@@ -101,6 +102,7 @@ export default combineReducers(
 ```js
 // e.g. components/SomeDataComponent.js
 import { READ_MANY } from 'redux-data-entity'
+import _ from 'lodash'
 
 import entities from '../entities'
 
@@ -116,12 +118,9 @@ class SomeDataComponent extends Component {
   renderContent() {
     return (
       <div>
-        {Object.keys(this.props.users).map((key) => {
-          const user = this.props.users[key]
-          return (
-            <span>{user.name}</span>            
-          )
-        })}
+        {_.map(this.props.users).map((user, key) => (
+          <span>{user.name}</span>
+        ))}
       </div>
     )
   }
