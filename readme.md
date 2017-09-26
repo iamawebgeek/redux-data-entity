@@ -28,6 +28,8 @@ coming soon...
 
 ## Usage
 
+Full API reference [here](docs/api.md)
+
 ### Creating new data entity instance
 ```js
 // e.g. entities/index.js
@@ -101,14 +103,26 @@ export default combineReducers(
 ### Using inside component
 ```js
 // e.g. components/SomeDataComponent.js
-import { READ_MANY } from 'redux-data-entity'
+import { Actions } from 'redux-data-entity'
 import _ from 'lodash'
 
 import entities from '../entities'
 
 class SomeDataComponent extends Component {
   componentDidMount() {
-    this.props.userActions(READ_MANY)
+    this.props.userActions(Actions.READ_MANY, {}, (error, response) => {
+      // use callback function to chain requests
+      if (error === null) {
+        this.props.commentActions(Actions.READ_MANY, {
+          params: {
+            // handle these properly inside process function
+            filter: {
+              user_id: response.map((user) => user.id)
+            },
+          },
+        })
+      }
+    })
   }
   renderLoader() {
     return (
@@ -116,6 +130,15 @@ class SomeDataComponent extends Component {
     )
   }
   renderContent() {
+    const error = entities.users.getLastError(Actions.READ_MANY)
+    if (error !== null) {
+      return (
+        <div>
+          <p>{error.message}</p>
+          <button>Retry</button>
+        </div>
+      )
+    }
     return (
       <div>
         {_.map(this.props.users).map((user, key) => (
@@ -133,12 +156,13 @@ class SomeDataComponent extends Component {
 
 const mapStateToProps = (state) => ({
   users: state.users,
-  // note: any loading state getters should be inside state to props mapper
-  isLoadingUsers: entities.users.isPerforming(READ_MANY),
+  // note: any loading state getters are recommended to include inside state to props mapper or props merging function
+  isLoadingUsers: entities.users.isPerforming(Actions.READ_MANY),
 })
 
 const mapDispatchToProps = (dispatch) => ({
   userActions: entities.users.getActionHandler(dispatch),
+  commentActions: entities.comments.getActionHandler(dispatch),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(SomeDataComponent)

@@ -30,6 +30,8 @@ declare class DataEntity<DataEntityConfig> {
   getLastError: (action: DataEntityAction, config?: DataEntityActionConfig) => ?Error,
   getReducer: () => Function,
   getConst: (action: DataEntityAction, state?: DataEntityState) => string,
+  getConfig: () => object,
+  getActionConfig: () => object,
   parseAction: (type: string) => ?string,
   parseState: (type: string, action?: string) => ?string,
 }
